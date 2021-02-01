@@ -4,12 +4,15 @@
 # Created by Claus Ekstrøm 2019
 # @ClausEkstrom
 #
+# Modified by Ornwipa Thamsuwan 2021
+#
 
 library("shiny")
 library("deSolve")
 library("cowplot")
 library("ggplot2")
-library("tidyverse")
+library("dplyr")
+library("tidyr")
 library("ggrepel")
 library("shinydashboard")
 
@@ -50,15 +53,15 @@ ui <- dashboardPage(
     ),
     sliderInput("vaceff",
       "Vaccine effectiveness (%):",
-      min = 0, max = 100, value = 85
+      min = 0, max = 100, value = 50
     ),
     sliderInput("infper",
       "Infection period (days):",
-      min = 1, max = 30, value = 7
+      min = 1, max = 60, value = 14
     ),
     sliderInput("timeframe",
       "Time frame (days):",
-      min = 1, max = 400, value = 200
+      min = 1, max = 500, value = 365
     )
     
   ),
@@ -91,20 +94,19 @@ ui <- dashboardPage(
 server <- function(input, output) {
   # Create reactive input
   dataInput <- reactive({
-    init       <-
+    init <-
       c(
         S = 1 - input$pinf / (input$popsize*1000000) - input$pvac / 100 * input$vaceff / 100,
-        I = input$pinf /  (input$popsize*1000000),
+        I =     input$pinf / (input$popsize*1000000),
         R = 0,
-        V = input$pvac / 100 * input$vaceff / 100
+        V =                                            input$pvac / 100 * input$vaceff / 100
       )
     ## beta: infection parameter; gamma: recovery parameter
     parameters <-
-      c(beta = input$connum * 1 / input$infper,
-        # * (1 - input$pvac/100*input$vaceff/100),
+      c(beta = input$connum / input$infper, # * (1 - input$pvac / 100 * input$vaceff / 100),
         gamma = 1 / input$infper)
     ## Time frame
-    times      <- seq(0, input$timeframe, by = .2)
+    times <- seq(0, input$timeframe, by = .2)
     
     ## Solve using ode (General Solver for Ordinary Differential Equations)
     out <- ode(
@@ -113,7 +115,6 @@ server <- function(input, output) {
         func = sir,
         parms = parameters
       )   
-    #    out
     as.data.frame(out)
   })
   
